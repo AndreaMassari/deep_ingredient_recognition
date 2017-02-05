@@ -2,12 +2,15 @@
 This is the first module of the project, it simply contains the image preprocessing through the VGG16 
 conv netw and some loaders. In the future, scraping might be included in this module
 """
+import csv
+import os
+import json
 
 i_list_def=["beef","chicken","pork","potatoes","eggs","beans","tomatoes","corn"]
 
 class DIRPreproc:
 
-	def __init__(self,datadirec='private/data/allrecipesscrepo',home='',ingredlist=i_list_def):
+	def __init__(self,datadirec='private/allrecipesscrepo',home='',ingredlist=i_list_def):
 		"""
 		Initializer. _effective lists are a subset of the complete lists based on the fact that there are
 		at least one valid picture associated with these recipes id's or ingredients or categories resp.
@@ -40,7 +43,7 @@ class DIRPreproc:
 		"""
 		This method loads recipe category information from the scraped categ.csv file
 		"""
-		with open(self.datadirec+'/categ.csv') as csvfile:
+		with open(self.datadir+'/categ.csv') as csvfile:
 			reader = csv.reader(csvfile)
 			for rec in reader:
 				recipe_id=rec[0]
@@ -50,17 +53,17 @@ class DIRPreproc:
 				#if recipe_id not in categ_dict.keys():
 				self.list_rec_categ+=[recipe_id]
 				self.categ_dict[recipe_id]=category
-		categ_dict_uptodate=True
+		self.categ_dict_uptodate=True
 		return
 
 	def ingred_loader(self):
 		"""
 		This method loads recipe ingredient descriptions from the scraped ingred.csv file
 		"""
-		if not categ_dict_uptodate:
+		if not self.categ_dict_uptodate:
 			print('Run categ_loader() first!!')
 			return
-		with open(self.datadirec+'/ingred.csv') as csvfile:
+		with open(self.datadir+'/ingred.csv') as csvfile:
 			reader =  csv.reader(csvfile)
 			for rec in reader:
 				recipe_id=rec[0]
@@ -84,7 +87,7 @@ class DIRPreproc:
 				ingredients=list(temp_dict_entry)
 				temp_dict={"id":recipe_id,"name":recipe_name,"ingredients":ingredients,"category":category}
 				self.ingcat_dictlist+=[temp_dict]
-				self.ingcat_dict["id"]=[recipe_name,category,ingredients]
+				self.ingcat_dict[recipe_id]=[recipe_name,category,ingredients]
 		return
 
 	def effective_list_maker(self):
@@ -96,10 +99,10 @@ class DIRPreproc:
 				inglisttemp+=recipe["ingredients"]
 				catlisttemp+=[recipe["category"]]
 				self.list_rec_effective+=[recipe['id']]
-		inglisttemp=list(set(inglisttemp))
-		self.ing_list_effective=inglisttemp.sort()
-		catlisttemp=list(set(catlisttemp))
-		self.cat_list_effective=catlisttemp.sort()
+		self.ing_list_effective=list(set(inglisttemp))
+		self.ing_list_effective.sort()
+		self.cat_list_effective=list(set(catlisttemp))
+		self.cat_list_effective.sort()
 		return
 
 
