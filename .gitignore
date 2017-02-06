@@ -1,3 +1,4 @@
 scratch-docs/*
 private/*
 .ipynb_checkpoints/
+__pycache__/*
