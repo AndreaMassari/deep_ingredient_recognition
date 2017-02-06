@@ -4,11 +4,15 @@ conv netw and some loaders. In the future, scraping might be included in this mo
 """
 import csv
 import os
+import os.path
 import json
+import numpy as np
+from keras.applications.vgg16 import VGG16
+from scipy import ndimage
 
 i_list_def=["beef","chicken","pork","potatoes","eggs","beans","tomatoes","corn"]
 
-class DIRPreproc:
+class RecPreproc:
 
 	def __init__(self,datadirec='private/allrecipesscrepo',home='',ingredlist=i_list_def):
 		"""
@@ -128,22 +132,62 @@ class DIRPreproc:
 
 		return
 
-
-def img_preproc(id_range,datadir,img_width=224, img_height=224):#typically list_rec_effective[12000:13000]
+class ImgPreproc:
 	"""
-	This function processes images through VGG16 with no top layers and saves output to disc
+	This class runs images through VGG16 and saves the outputs which will be loaded by the classifier
 	"""
-	modelvggc = VGG16(weights='imagenet', include_top=False,input_shape=(img_width, img_height,3))
 
-	for recipe_id in id_range:
-		path_rec=datadir+'/'+recipe_id
-		path_rec_out=datadir+'/preprocessed_img/'+recipe_id
-		os.mkdir(path_rec_out)
-		for image_name in os.listdir(path_rec):
-			path_img_in=path_rec+'/'+image_name
-			if image_name!='.DS_Store':
-				img_in=ndimage.imread(path_img_in)[13:-13,13:-13,:]
-				img_out=modelvggc.predict(np.array([img_in]))[0]
+	
+	def __init__(self,datadirec='private/allrecipesscrepo',img_width=224, img_height=224,load_list_rec_eff=""):
+		"""
+		Here I store simply recipe ids and the VGG model, initialized
+		"""
+		self.model = VGG16(weights='imagenet', include_top=False,input_shape=(img_width, img_height,3))
+		self.id_ranges=[]
+		self.datadir=datadirec
+		if str(type(load_list_rec_eff))=='rec_img_preprocessing.DIRPreproc':
+			#supply a recipe preprocessing class and it'll inherit its effective list
+			self.list_rec_effective=load_list_rec_eff.list_rec_effective
+		elif type(load_list_rec_eff)==str:
+			#supply a tag and it'll load the appropriate file previously saved by the saver function above
+			with open(self.datadir+'/list_rec_eff'+load_list_rec_eff+'.json') as file:
+				self.list_rec_effective=json.load(file)
+		else:
+			self.list_rec_effective=[]
+		return
+
+	def make_list_rec_eff(self):
+		"""
+		Here I'm thinking of supplying the class with a method to go over the ingred directories themself
+		and build its list_rec_effective but I recommend loading from previous class output
+		"""
+		print("This does nothing so far, apologies.")
+		return 
+
+	def img_preproc(self,id_range):
+		"""
+		This function processes images through VGG16 with no top layers and saves output to disc
+		"""
+		id_list=self.list_rec_effective[id_range[0]:id_range[1]]
+		id_list_new=[]
+		for recipe_id in id_list:
+			path_rec=self.datadir+'/'+recipe_id
+			path_rec_out=self.datadir+'/preprocessed_img/'+recipe_id
+			if os.path.isdir(path_rec_out):
+				print("Folder "+path_rec_out+" exists already. We won't overwrite existing files, just add to them.")
+			else:
+				os.mkdir(path_rec_out)
+			for image_name in os.listdir(path_rec):
+				path_img_in=path_rec+'/'+image_name
 				path_img_out=path_rec_out+'/'+image_name
-				np.save(path_img_out,img_out)
-	return
+				if image_name!='.DS_Store' and not os.path.isfile(path_img_out+'.npy'):
+					print("Writing new file at "+path_img_out+'.npy')
+					img_in=ndimage.imread(path_img_in)[13:-13,13:-13,:]
+					img_out=self.model.predict(np.array([img_in]))[0]
+					np.save(path_img_out,img_out)
+			id_list_new+=[recipe_id]
+		self.id_ranges+=id_list_new
+		return
+
+
+
